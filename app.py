@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from gradio_client import Client
 import base64
 import tempfile
+import os
 
 app = Flask(__name__)
 client = Client("Psyduck552/IsThisMould")
@@ -20,19 +21,21 @@ def predict():
         base64_str = data["base64"].split(",")[-1]
         decoded = base64.b64decode(base64_str)
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
-            temp.write(decoded)
-            temp.flush()
+        # Write to temp file
+        temp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+        temp.write(decoded)
+        temp.close()
 
-            result = client.predict(
-                {"path": temp.name},  # ✅ Pass as dictionary
-                api_name="/predict"
-            )
+        # Wrap in dict as required
+        result = client.predict(
+            {"path": temp.name},  # ✅ Correct format for Gradio
+            api_name="/predict"
+        )
 
-        if isinstance(result, dict):
-            return jsonify(result)
-        else:
-            return jsonify({"result": str(result)})
+        # Clean up the file
+        os.remove(temp.name)
+
+        return jsonify(result if isinstance(result, dict) else {"result": str(result)})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
