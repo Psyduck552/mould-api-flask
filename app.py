@@ -1,11 +1,9 @@
 from flask import Flask, request, jsonify
 from gradio_client import Client
 import base64
-import io
+import tempfile
 
 app = Flask(__name__)
-
-# Connect to your Hugging Face Space
 client = Client("Psyduck552/IsThisMould")
 
 @app.route("/")
@@ -19,20 +17,23 @@ def predict():
         if not data or "base64" not in data:
             return jsonify({"error": "Missing base64 image"}), 400
 
-        # Extract the base64 string from the JSON
         base64_str = data["base64"].split(",")[-1]
-        decoded_image = base64.b64decode(base64_str)
+        decoded = base64.b64decode(base64_str)
 
-        # Convert to file-like object for Gradio
-        image_file = io.BytesIO(decoded_image)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
+            temp.write(decoded)
+            temp.flush()
 
-        # Send to Hugging Face Space
-        result = client.predict(
-            image_file,
-            api_name="/predict"
-        )
+            result = client.predict(
+                temp.name,  # Use path to the temp file
+                api_name="/predict"
+            )
 
-        return jsonify(result)
+        # Ensure result is JSON serializable
+        if isinstance(result, dict):
+            return jsonify(result)
+        else:
+            return jsonify({"result": str(result)})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
