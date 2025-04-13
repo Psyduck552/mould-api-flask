@@ -25,11 +25,10 @@ def predict():
             temp.flush()
 
             result = client.predict(
-                temp.name,  # Use path to the temp file
+                {"path": temp.name},  # ✅ Pass as dictionary
                 api_name="/predict"
             )
 
-        # Ensure result is JSON serializable
         if isinstance(result, dict):
             return jsonify(result)
         else:
