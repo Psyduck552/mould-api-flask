@@ -21,19 +21,20 @@ def predict():
         base64_str = data["base64"].split(",")[-1]
         decoded = base64.b64decode(base64_str)
 
-        # Write to temp file
-        temp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
-        temp.write(decoded)
-        temp.close()
+        # Save image as temp file
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp:
+            temp.write(decoded)
+            temp.flush()
+            temp_path = temp.name
 
-        # Wrap in dict as required
-        result = client.predict(
-            {"path": temp.name},  # ✅ Correct format for Gradio
-            api_name="/predict"
-        )
+        # Reopen the file and pass it directly
+        with open(temp_path, "rb") as f:
+            result = client.predict(
+                f,
+                api_name="/predict"
+            )
 
-        # Clean up the file
-        os.remove(temp.name)
+        os.remove(temp_path)
 
         return jsonify(result if isinstance(result, dict) else {"result": str(result)})
 
