@@ -29,14 +29,20 @@ def predict():
 
         # Reopen the file and pass it directly
         with open(temp_path, "rb") as f:
-            result = client.predict(
-                f,
-                api_name="/predict"
-            )
+            result = client.predict(f, api_name="/predict")
 
         os.remove(temp_path)
 
-        return jsonify(result if isinstance(result, dict) else {"result": str(result)})
+        # Ensure the result is JSON-safe
+        if isinstance(result, dict):
+            safe_result = {
+                k: (float(v) if isinstance(v, (int, float)) else v)
+                for k, v in result.items()
+            }
+        else:
+            safe_result = {"result": str(result)}
+
+        return jsonify(safe_result)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
