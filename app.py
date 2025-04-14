@@ -21,22 +21,21 @@ def predict():
         base64_str = data["base64"].split(",")[-1]
         decoded = base64.b64decode(base64_str)
 
-        # Save image as temp file
-        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp:
-            temp.write(decoded)
-            temp.flush()
-            temp_path = temp.name
+        # Save base64 image to temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_file:
+            temp_file.write(decoded)
+            temp_file_path = temp_file.name
 
-        # Reopen the file and pass it directly
-        with open(temp_path, "rb") as f:
-            result = client.predict(f, api_name="/predict")
+        # Send to Hugging Face
+        result = client.predict({"path": temp_file_path}, api_name="/predict")
 
-        os.remove(temp_path)
+        # Clean up
+        os.remove(temp_file_path)
 
-        # Ensure the result is JSON-safe
+        # Ensure the output is clean JSON
         if isinstance(result, dict):
             safe_result = {
-                k: (float(v) if isinstance(v, (int, float)) else v)
+                str(k): float(v) if isinstance(v, (int, float)) else str(v)
                 for k, v in result.items()
             }
         else:
