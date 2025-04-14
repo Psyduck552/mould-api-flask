@@ -26,8 +26,9 @@ def predict():
             temp_file.write(decoded)
             temp_file_path = temp_file.name
 
-        # Send to Hugging Face
-        result = client.predict({"path": temp_file_path}, api_name="/predict")
+        # Open file in binary mode and send to Hugging Face
+        with open(temp_file_path, "rb") as f:
+            result = client.predict(f, api_name="/predict")
 
         # Clean up
         os.remove(temp_file_path)
