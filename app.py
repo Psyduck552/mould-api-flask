@@ -3,6 +3,7 @@ from gradio_client import Client
 import base64
 import tempfile
 import os
+import json
 
 app = Flask(__name__)
 client = Client("Psyduck552/IsThisMould")
@@ -26,23 +27,17 @@ def predict():
             temp_file.write(decoded)
             temp_file_path = temp_file.name
 
-        # Open file in binary mode and send to Hugging Face
-        with open(temp_file_path, "rb") as f:
-            result = client.predict(f, api_name="/predict")
+        # Send to Hugging Face
+        result = client.predict({"path": temp_file_path}, api_name="/predict")
 
-        # Clean up
+        # Clean up temp file
         os.remove(temp_file_path)
 
-        # Ensure the output is clean JSON
-        if isinstance(result, dict):
-            safe_result = {
-                str(k): float(v) if isinstance(v, (int, float)) else str(v)
-                for k, v in result.items()
-            }
-        else:
-            safe_result = {"result": str(result)}
-
-        return jsonify(safe_result)
+        # Ensure result is serialisable
+        try:
+            return jsonify(json.loads(json.dumps(result)))
+        except Exception:
+            return jsonify({"result": str(result)})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
